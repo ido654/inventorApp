@@ -6,7 +6,9 @@ from conversations.return_item import return_command , ask_items , ASK_ITEM_ID ,
 from conversations.history_record import get_history_command , ASK_DAYES , ask_days, cancel
 from conversations.registration import ASK_DISPLAY_NAME , start_registration , cancel , handle_registration_name
 from dotenv import load_dotenv
+from db.db import init_db
 import os
+
 
 load_dotenv()
 
@@ -21,7 +23,7 @@ if not BOT_TOKEN:
 if __name__ == "__main__":
     print("Starting bot...")
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-
+    init_db()
     # פקודות
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("daily_count", daily_count_command))

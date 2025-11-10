@@ -1,12 +1,19 @@
-import sqlite3
+from psycopg import connect
+from psycopg.errors import OperationalError
 from contextlib import contextmanager
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
-DB_PATH = os.environ.get("DB_PATH", "bot.db")
 
+# קונפיגורציה של PostgreSQL
+DB_NAME = os.environ.get("DB_NAME")
+DB_USER = os.environ.get("DB_USER")
+DB_PASSWORD = os.environ.get("DB_PASSWORD")
+DB_HOST = os.environ.get("DB_HOST")
+DB_PORT = os.environ.get("DB_PORT", 5432) # ברירת מחדל ל-5432
+CONN_STRING = f"dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD} host={DB_HOST} port={DB_PORT}"
 # ==========================
 # 🔌 ניהול חיבורי מסד נתונים
 # ==========================
@@ -16,23 +23,12 @@ def get_connection():
     """חיבור ל-DB במצב כתיבה, כולל ניהול commit/rollback."""
     conn = None
     try:
-        conn = sqlite3.connect(DB_PATH, timeout=10)
-        conn.row_factory = sqlite3.Row
+        conn = connect(CONN_STRING)
         yield conn
         conn.commit()
-    except sqlite3.OperationalError as e:
-        print(f"[DB ERROR] Failed to connect or operate on DB file: {DB_PATH}")
-        print(f"Error details: {e}")
-        # במקרה של שגיאה, אין צורך לנסות commit, אבל חשוב לסגור את החיבור
-        if conn:
-            conn.close() 
-        # כאן אתה יכול לבחור להעלות שגיאה מחדש או פשוט להפסיק
-        raise # מעלה את השגיאה הלאה כדי שהתהליך ייכשל אם ה-DB חיוני
-    except Exception as e:
-        print(f"[GENERAL DB ERROR] An unexpected error occurred: {e}")
-        if conn:
-            conn.close()
-        raise
+    except OperationalError as e:
+        print(f"[DB ERROR] Failed to connect to PostgreSQL: {e}")
+        raise # חשוב להעלות שגיאה כדי להפסיק את הבוט במקרה כזה
     finally:
         if conn:
             conn.close()
@@ -42,22 +38,11 @@ def get_readonly_connection():
     """חיבור ל-DB במצב קריאה בלבד (ללא commit וללא נעילות כתיבה)."""
     conn = None
     try:
-        conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
-        conn.row_factory = sqlite3.Row
+        conn = connect(CONN_STRING)
         yield conn
-    except sqlite3.OperationalError as e:
-        print(f"[DB ERROR] Failed to connect or operate on DB file: {DB_PATH}")
-        print(f"Error details: {e}")
-        # במקרה של שגיאה, אין צורך לנסות commit, אבל חשוב לסגור את החיבור
-        if conn:
-            conn.close() 
-        # כאן אתה יכול לבחור להעלות שגיאה מחדש או פשוט להפסיק
-        raise # מעלה את השגיאה הלאה כדי שהתהליך ייכשל אם ה-DB חיוני
-    except Exception as e:
-        print(f"[GENERAL DB ERROR] An unexpected error occurred: {e}")
-        if conn:
-            conn.close()
-        raise
+    except OperationalError as e:
+        print(f"[DB ERROR] Failed to connect to PostgreSQL: {e}")
+        raise # חשוב להעלות שגיאה כדי להפסיק את הבוט במקרה כזה
     finally:
         if conn:
             conn.close()
@@ -71,46 +56,47 @@ def init_db():
         cur = conn.cursor()
         cur.execute("""
                     CREATE TABLE IF NOT EXISTS items (
-                    id INTEGER PRIMARY KEY UNIQUE ,
-                    owner TEXT ,
-                    category TEXT 
+                    id VARCHAR(50) PRIMARY KEY UNIQUE,
+                    owner VARCHAR(50) TEXT ,
+                    category VARCHAR(50) NOT NULL, 
                     )
                     """)
         
         cur.execute(""" 
             CREATE TABLE IF NOT EXISTS relations (
-                    item_id INTEGER,
-                    related_id INTEGER,
+                    item_id VARCHAR(50),
+                    related_id VARCHAR(50),
                     PRIMARY  KEY (item_id , related_id),
-                    FOREIGN KEY (item_id) REFERENCES items(id),
-                    FOREIGN KEY (related_id) REFERENCES items(id)
+                    FOREIGN KEY (item_id) REFERENCES items(id) ON CASCADE,
+                    FOREIGN KEY (related_id) REFERENCES items(id) ON CASCADE
             )
         """)
 
         cur.execute(""" 
             CREATE TABLE IF NOT EXISTS records (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    item_id INTEGER NOT NULL UNIQUE,
-                    name TEXT NOT NULL,
-                    date TEXT DEFAULT (datetime('now', 'localtime')),
+                    id BIGSERIAL PRIMARY KEY AUTOINCREMENT,
+                    item_id VARCHAR(50) NOT NULL UNIQUE,
+                    name VARCHAR(255) NOT NULL,
+                    date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     FOREIGN KEY (item_id) REFERENCES items(id)
             )
         """)
 
         cur.execute(""" 
             CREATE TABLE IF NOT EXISTS history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                item_id INTEGER NOT NULL,
-                name TEXT NOT NULL,
-                date TEXT DEFAULT (datetime('now', 'localtime')),
-                is_return INTEGER DEFAULT 0,
+                id BIGSERIAL PRIMARY KEY AUTOINCREMENT,
+                item_id VARCHAR(50) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                is_return BOOLEAN DEFAULT FALSE,
                 FOREIGN KEY (item_id) REFERENCES items(id)
             )
         """)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY UNIQUE NOT NULL, 
-                display_name TEXT NOT NULL
+                id BIGSERIAL PRIMARY KEY,  -- BIGSERIAL במקום INTEGER PRIMARY KEY
+                user_id BIGINT UNIQUE NOT NULL, # שימוש ב-BIGINT למזהי טלגרם ארוכים
+                display_name VARCHAR(255) NOT NULL
             )
         """)
 
@@ -222,13 +208,13 @@ def add_record(new_name, item_id):
         existing_record = cur.fetchone()
         if existing_record:
             old_name = existing_record[0]
-            cur.execute("INSERT INTO history (name , item_id, is_return) VALUES (?,?,1)" , (old_name , item_id))
+            cur.execute("INSERT INTO history (name , item_id, is_return) VALUES (?,?,TRUE)" , (old_name , item_id))
             cur.execute("DELETE FROM records WHERE item_id = ? " , (item_id,))
             takeover_happened = True
         else:
             takeover_happened = False
         cur.execute("INSERT INTO records (name, item_id) VALUES (?,?)" , (new_name , item_id))
-        cur.execute("INSERT INTO history (name, item_id, is_return) VALUES (?, ?, 0)" , (new_name , item_id)) 
+        cur.execute("INSERT INTO history (name, item_id, is_return) VALUES (?, ?, FALSE)" , (new_name , item_id)) 
         return "TAKEOVER" if takeover_happened else "SUCCESS"
        
 
@@ -244,7 +230,7 @@ def remove_record(name,  item_id ):
         
         cur.execute("DELETE FROM records WHERE item_id = ?", (item_id,))
         cur.execute(
-            "INSERT INTO history (name, item_id, is_return) VALUES (?, ?, 1)",
+            "INSERT INTO history (name, item_id, is_return) VALUES (?, ?, TRUE)",
             (name, item_id)
         )
         return 'SUCCESS'

@@ -20,10 +20,19 @@ def get_connection():
         conn.row_factory = sqlite3.Row
         yield conn
         conn.commit()
-    except sqlite3.Error as e:
-        print(f"[DB ERROR] {e}")
+    except sqlite3.OperationalError as e:
+        print(f"[DB ERROR] Failed to connect or operate on DB file: {DB_PATH}")
+        print(f"Error details: {e}")
+        # במקרה של שגיאה, אין צורך לנסות commit, אבל חשוב לסגור את החיבור
         if conn:
-            conn.rollback()
+            conn.close() 
+        # כאן אתה יכול לבחור להעלות שגיאה מחדש או פשוט להפסיק
+        raise # מעלה את השגיאה הלאה כדי שהתהליך ייכשל אם ה-DB חיוני
+    except Exception as e:
+        print(f"[GENERAL DB ERROR] An unexpected error occurred: {e}")
+        if conn:
+            conn.close()
+        raise
     finally:
         if conn:
             conn.close()
@@ -36,8 +45,19 @@ def get_readonly_connection():
         conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
         conn.row_factory = sqlite3.Row
         yield conn
-    except sqlite3.Error as e:
-        print(f"[DB ERROR - READONLY] {e}")
+    except sqlite3.OperationalError as e:
+        print(f"[DB ERROR] Failed to connect or operate on DB file: {DB_PATH}")
+        print(f"Error details: {e}")
+        # במקרה של שגיאה, אין צורך לנסות commit, אבל חשוב לסגור את החיבור
+        if conn:
+            conn.close() 
+        # כאן אתה יכול לבחור להעלות שגיאה מחדש או פשוט להפסיק
+        raise # מעלה את השגיאה הלאה כדי שהתהליך ייכשל אם ה-DB חיוני
+    except Exception as e:
+        print(f"[GENERAL DB ERROR] An unexpected error occurred: {e}")
+        if conn:
+            conn.close()
+        raise
     finally:
         if conn:
             conn.close()

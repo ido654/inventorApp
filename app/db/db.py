@@ -5,7 +5,7 @@ import os
 
 load_dotenv()
 
-DB_PATH = os.environ.get("DB_PATH")
+DB_PATH = os.environ.get("DB_PATH", "bot.db")
 
 # ==========================
 # 🔌 ניהול חיבורי מסד נתונים

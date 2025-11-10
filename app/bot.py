@@ -7,15 +7,20 @@ from conversations.history_record import get_history_command , ASK_DAYES , ask_d
 from conversations.registration import ASK_DISPLAY_NAME , start_registration , cancel , handle_registration_name
 from dotenv import load_dotenv
 import os
+
 load_dotenv()
 
-TOKEN= os.environ.get('TOKEN')
+BOT_TOKEN= os.environ.get('TELEGRAM_BOT_TOKEN' , 'TELEGRAM_BOT_TOKEN')
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
+PORT = int(os.environ.get('PORT', 8080))
 BOT_USERNAME = os.environ.get('BOT_USERNAME')
+if not BOT_TOKEN:
+    raise ValueError("TELEGRAM_BOT_TOKEN must be set as an environment variable.")
 
 
 if __name__ == "__main__":
     print("Starting bot...")
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     # פקודות
     app.add_handler(CommandHandler("start", start_command))
@@ -50,7 +55,18 @@ if __name__ == "__main__":
         },
         fallbacks=[CommandHandler("cancel" , cancel)]
     ))
-    print("Bot is running...")
-    app.run_polling(poll_interval=3)
+
+    if WEBHOOK_URL:
+        print(f"Starting in Webhook mode. Listening on port {PORT}.")
+        # הפעלת שרת HTTP קטן המאזין לבקשות מטלגרם
+        app.run_webhook(
+            listen="0.0.0.0", # האזנה לכל הממשקים
+            port=PORT,
+            url_path=BOT_TOKEN,  # שימוש בטוקן כנתיב סודי
+            webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
+        )
+    else:
+        print("Starting in Polling mode (WEBHOOK_URL not set).")
+        app.run_polling(poll_interval=3)
 
 

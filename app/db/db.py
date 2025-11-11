@@ -13,7 +13,7 @@ DB_USER = os.environ.get("DB_USER")
 DB_PASSWORD = os.environ.get("DB_PASSWORD")
 DB_HOST = os.environ.get("DB_HOST")
 DB_PORT = os.environ.get("DB_PORT", 5432) # ברירת מחדל ל-5432
-CONN_STRING = "postgresql://bot_postgresql_ido_user:M9ZovEWuYki6dnJ97RNH4tAb1CxsQtPJ@dpg-d495kaqdbo4c7388sog0-a/bot_postgresql_ido"
+CONN_STRING = "postgresql://bot_postgresql_ido_user:M9ZovEWuYki6dnJ97RNH4tAb1CxsQtPJ@dpg-d495kaqdbo4c7388sog0-a.oregon-postgres.render.com/bot_postgresql_ido"
                
 # ==========================
 # 🔌 ניהול חיבורי מסד נתונים
@@ -136,7 +136,7 @@ def register_user(user_id, display_name):
         cur = conn.cursor()
         # שימוש ב-INSERT OR REPLACE כדי לאפשר למשתמש לעדכן את שמו
         cur.execute(
-            "INSERT OR REPLACE INTO users (user_id, display_name) VALUES (?, ?)",
+            "INSERT INTO users (user_id, display_name) VALUES (%s, %s) ON CONFLICT (user_id) DO UPDATE SET display_name = EXCLUDED.display_name;",
             (user_id, display_name)
         )
 
@@ -144,7 +144,7 @@ def get_user_display_name(user_id):
     """מחזיר את שם התצוגה של המשתמש הרשום."""
     with get_readonly_connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT display_name FROM users WHERE user_id = ?", (user_id,))
+        cur.execute("SELECT display_name FROM users WHERE user_id = %s;", (user_id,))
         result = cur.fetchone()
         return result[0] if result else None
 
@@ -155,36 +155,52 @@ def get_user_display_name(user_id):
 def add_item(item_id, owner , category):
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute("INSERT INTO items (id , owner , category) VALUES (?,?,?)" , (item_id , owner , category))
-        return cur.lastrowid
+        cur.execute("INSERT INTO items (id , owner , category) VALUES (%s,%s,%s) ON CONFLICT (id) DO NOTHING RETURNING id;" , (item_id , owner , category))
+        return cur.fetchone()
+    
+def add_many_items(items):
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.executemany("INSERT INTO items (id , owner , category) VALUES (%s,%s,%s) ON CONFLICT (id) DO NOTHING RETURNING id;" , (items))
+        return cur.fetchone()
 
 def get_item (item_id):
+    item_id = str(item_id)
     with get_readonly_connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT * FROM items WHERE id = ?" , (item_id,))
+        cur.execute("SELECT * FROM items WHERE id = %s;" , (item_id,))
         return cur.fetchall()
     
 def get_all_items():
     with get_readonly_connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT * FROM items")
+        cur.execute("SELECT * FROM items;")
         return cur.fetchall()
         
 
 def delete_item(item_id):
+    item_id = str(item_id)
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute("DELETE FROM items WHERE id = ?" , (item_id,))
+        cur.execute("DELETE FROM items WHERE id = %s" , (item_id,))
 
 # ==========================
 # 🔗 CRUD: RELATIONS
 # ==========================
         
 def add_relation(item_id , related_id):
+    item_id = str(item_id)
+    related_id = str(related_id)
     with get_connection() as conn:
         cur= conn.cursor()
-        cur.execute("INSERT INTO relations (item_id , related_id) VALUES (?,?)" , (item_id , related_id))
+        cur.execute("INSERT INTO relations (item_id , related_id) VALUES (%s,%s) ON CONFLICT (item_id) DO NOTHING" , (item_id , related_id))
 
+def add_many_relations(items):
+    with get_connection() as conn:
+        cur = conn.cursor()
+        cur.executemany("INSERT INTO relations (item_id , related_id) VALUES (%s , %s) ON CONFLICT (item_id) DO NOTHING" , (items))
+
+        
 def get_all_relations():
     with get_readonly_connection() as conn:
         cur = conn.cursor()
@@ -196,21 +212,24 @@ def get_all_relations():
         return cur.fetchall()
 
 def get_relations(item_id):
+    item_id = str(item_id)
     with get_readonly_connection() as conn:
         cur = conn.cursor()
         cur.execute("""
             SELECT r.related_id, i.owner, i.category
             FROM relations AS r
             JOIN items AS i ON i.id = r.related_id
-            WHERE r.item_id = ?
+            WHERE r.item_id = %s
         """, (item_id,))
         return cur.fetchall()
 
 def delete_relation(item_id, related_id):
+    item_id = str(item_id)
+    related_id = str(related_id)
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute(
-            "DELETE FROM relations WHERE item_id = ? AND related_id = ?",
+            "DELETE FROM relations WHERE item_id = %s AND related_id = %s",
             (item_id, related_id)
         )
 
@@ -218,53 +237,57 @@ def delete_relation(item_id, related_id):
 # 📋 CRUD: RECORDS
 # ==========================
 def get_record(item_id):
+    item_id = str(item_id)
     with get_readonly_connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT * FROM records WHERE item_id = ?" , (item_id,))
+        cur.execute("SELECT * FROM records WHERE item_id = %s" , (item_id,))
         return cur.fetchall()
     
 def add_record(new_name, item_id):
+    item_id = str(item_id)
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT 1 FROM items WHERE id = ? LIMIT 1" , (item_id, ))
+        cur.execute("SELECT 1 FROM items WHERE id = %s LIMIT 1" , (item_id, ))
         if not cur.fetchone ():
             return "ITEM_NOT_FOUND"
-        cur.execute("SELECT name FROM records WHERE item_id = ?" , (item_id,))
+        cur.execute("SELECT name FROM records WHERE item_id = %s" , (item_id,))
         existing_record = cur.fetchone()
         if existing_record:
             old_name = existing_record[0]
-            cur.execute("INSERT INTO history (name , item_id, is_return) VALUES (?,?,TRUE)" , (old_name , item_id))
-            cur.execute("DELETE FROM records WHERE item_id = ? " , (item_id,))
+            cur.execute("INSERT INTO history (name , item_id, is_return) VALUES (%s,%s,TRUE)" , (old_name , item_id))
+            cur.execute("DELETE FROM records WHERE item_id = %s " , (item_id,))
             takeover_happened = True
         else:
             takeover_happened = False
-        cur.execute("INSERT INTO records (name, item_id) VALUES (?,?)" , (new_name , item_id))
-        cur.execute("INSERT INTO history (name, item_id, is_return) VALUES (?, ?, FALSE)" , (new_name , item_id)) 
+        cur.execute("INSERT INTO records (name, item_id) VALUES (%s,%s)" , (new_name , item_id))
+        cur.execute("INSERT INTO history (name, item_id, is_return) VALUES (%s, %s, FALSE)" , (new_name , item_id)) 
         return "TAKEOVER" if takeover_happened else "SUCCESS"
        
 
 def remove_record(name,  item_id ):
+    item_id = str(item_id)
     """כאשר מחזירים ציוד"""
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute("SELECT name FROM records WHERE item_id = ?" , (item_id,))
+        cur.execute("SELECT name FROM records WHERE item_id = %s" , (item_id,))
         existing_record = cur.fetchone()
         if not existing_record:
             return "NOT_TAKEN"
         
         
-        cur.execute("DELETE FROM records WHERE item_id = ?", (item_id,))
+        cur.execute("DELETE FROM records WHERE item_id = %s", (item_id,))
         cur.execute(
-            "INSERT INTO history (name, item_id, is_return) VALUES (?, ?, TRUE)",
+            "INSERT INTO history (name, item_id, is_return) VALUES (%s, %s, TRUE)",
             (name, item_id)
         )
         return 'SUCCESS'
     
 
 def remove_history(item_id):
+    item_id = str(item_id)
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute("DELETE FROM history WHERE item_id = ?", (item_id,))
+        cur.execute("DELETE FROM history WHERE item_id = %s", (item_id,))
 
 def get_active_records():
     with get_readonly_connection() as conn:
@@ -290,21 +313,23 @@ def get_history():
         return cur.fetchall()
 
 def get_history_by_time(days):
+
     with get_readonly_connection() as conn:
         cur = conn.cursor()
+        interval_str = f"'{days} days'"
         cur.execute("""
-                    SELECT h.item_id, h.name, h.is_return, date(h.date)
+                    SELECT h.item_id, h.name, h.is_return, DATE(h.date)
                     FROM history AS h
                     JOIN (
                         SELECT item_id, MAX(date) AS max_date
                         FROM history
-                        WHERE date >= datetime('now', 'localtime', ?)
+                        WHERE date >= NOW() - %s ::INTERVAL
                         GROUP BY item_id
                     ) AS latest
                     ON h.item_id = latest.item_id AND h.date = latest.max_date
                     ORDER BY h.date DESC;
 
-                    """ , (f'-{days} days' ,) )
+                    """ ,(interval_str , ) )
         return cur.fetchall()
 
 # ==========================

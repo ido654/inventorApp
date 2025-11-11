@@ -13,7 +13,7 @@ DB_USER = os.environ.get("DB_USER")
 DB_PASSWORD = os.environ.get("DB_PASSWORD")
 DB_HOST = os.environ.get("DB_HOST")
 DB_PORT = os.environ.get("DB_PORT", 5432) # ברירת מחדל ל-5432
-CONN_STRING = f"dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD} host={DB_HOST} port={DB_PORT}"
+CONN_STRING = "postgresql://bot_postgresql_ido_user:M9ZovEWuYki6dnJ97RNH4tAb1CxsQtPJ@dpg-d495kaqdbo4c7388sog0-a.oregon-postgres.render.com/bot_postgresql_ido"
 # ==========================
 # 🔌 ניהול חיבורי מסד נתונים
 # ==========================
@@ -57,8 +57,8 @@ def init_db():
         cur.execute("""
                     CREATE TABLE IF NOT EXISTS items (
                     id VARCHAR(50) PRIMARY KEY UNIQUE,
-                    owner VARCHAR(50) TEXT ,
-                    category VARCHAR(50) NOT NULL, 
+                    owner VARCHAR(50),
+                    category VARCHAR(50) NOT NULL
                     )
                     """)
         
@@ -67,14 +67,14 @@ def init_db():
                     item_id VARCHAR(50),
                     related_id VARCHAR(50),
                     PRIMARY  KEY (item_id , related_id),
-                    FOREIGN KEY (item_id) REFERENCES items(id) ON CASCADE,
-                    FOREIGN KEY (related_id) REFERENCES items(id) ON CASCADE
+                    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
+                    FOREIGN KEY (related_id) REFERENCES items(id) ON DELETE CASCADE
             )
         """)
 
         cur.execute(""" 
             CREATE TABLE IF NOT EXISTS records (
-                    id BIGSERIAL PRIMARY KEY AUTOINCREMENT,
+                    id BIGSERIAL PRIMARY KEY,
                     item_id VARCHAR(50) NOT NULL UNIQUE,
                     name VARCHAR(255) NOT NULL,
                     date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -84,7 +84,7 @@ def init_db():
 
         cur.execute(""" 
             CREATE TABLE IF NOT EXISTS history (
-                id BIGSERIAL PRIMARY KEY AUTOINCREMENT,
+                id BIGSERIAL PRIMARY KEY ,
                 item_id VARCHAR(50) NOT NULL,
                 name VARCHAR(255) NOT NULL,
                 date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -94,8 +94,8 @@ def init_db():
         """)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
-                id BIGSERIAL PRIMARY KEY,  -- BIGSERIAL במקום INTEGER PRIMARY KEY
-                user_id BIGINT UNIQUE NOT NULL, # שימוש ב-BIGINT למזהי טלגרם ארוכים
+                id BIGSERIAL PRIMARY KEY, 
+                user_id BIGINT UNIQUE NOT NULL,
                 display_name VARCHAR(255) NOT NULL
             )
         """)

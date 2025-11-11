@@ -1,5 +1,7 @@
-from db.db import (get_history_by_time )
+
 from prettytable import PrettyTable
+import psycopg
+
 
 def create_table(items):
     if items:
@@ -22,6 +24,14 @@ def make_table(fiels_names, rows ):
         table.add_row(row)
     return table.get_string()
 
+
+try:
+    connection_url = "postgresql://bot_postgresql_ido_user:M9ZovEWuYki6dnJ97RNH4tAb1CxsQtPJ@dpg-d495kaqdbo4c7388sog0-a.oregon-postgres.render.com/bot_postgresql_ido"
+    conn = psycopg.connect(connection_url)
+    print("Connection to PostgreSQL successful!")
+
+except psycopg.Error as e:
+    print(f"Error connecting to PostgreSQL: {e}")
 
 
 

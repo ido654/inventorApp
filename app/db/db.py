@@ -26,10 +26,23 @@ def get_connection():
     try:
         conn = connect(CONN_STRING)
         yield conn
-        conn.commit()
+        # 1. COMMIT: מתבצע רק אם הקוד בבלוק 'with' רץ ללא שגיאה
+        conn.commit() 
+    
     except OperationalError as e:
+        # מטפל בכשלים בחיבור לשרת עצמו
         print(f"[DB ERROR] Failed to connect to PostgreSQL: {e}")
-        raise # חשוב להעלות שגיאה כדי להפסיק את הבוט במקרה כזה
+        raise 
+        
+    except Exception as e:
+        # 2. ROLLBACK: מטפל בכל שגיאה אחרת (לוגיקה, DB, וכו') 
+        # שקרתה בתוך הבלוק 'with' שמשתמש בפונקציה.
+        if conn:
+            conn.rollback() 
+        print(f"[APP ERROR] Transaction rolled back due to error: {e}")
+        # חשוב להעלות את השגיאה שוב כדי לטפל בה בבוט
+        raise 
+        
     finally:
         if conn:
             conn.close()
@@ -42,8 +55,19 @@ def get_readonly_connection():
         conn = connect(CONN_STRING)
         yield conn
     except OperationalError as e:
+        # מטפל בכשלים בחיבור לשרת עצמו
         print(f"[DB ERROR] Failed to connect to PostgreSQL: {e}")
-        raise # חשוב להעלות שגיאה כדי להפסיק את הבוט במקרה כזה
+        raise 
+        
+    except Exception as e:
+        # 2. ROLLBACK: מטפל בכל שגיאה אחרת (לוגיקה, DB, וכו') 
+        # שקרתה בתוך הבלוק 'with' שמשתמש בפונקציה.
+        if conn:
+            conn.rollback() 
+        print(f"[APP ERROR] Transaction rolled back due to error: {e}")
+        # חשוב להעלות את השגיאה שוב כדי לטפל בה בבוט
+        raise 
+        
     finally:
         if conn:
             conn.close()

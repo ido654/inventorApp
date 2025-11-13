@@ -1,9 +1,4 @@
 python-dotenv==1.2.1
 prettytable==3.9.0
 python-telegram-bot[webhooks]==22.5
-DB_NAME=botdb
-DB_USER=idoDahari
-DB_PASSWORD=@Ido135792468
-DB_HOST=""
-DB_PORT=5432
 psycopg==3.2.12

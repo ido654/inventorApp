@@ -9,7 +9,7 @@ async def start_command (update: Update , context : ContextTypes.DEFAULT_TYPE ):
     user = update.effective_user
     user_id = user.id
     user_name = get_user_display_name(user_id)
-    print(get_all_items())
+    print('start: ', get_all_items())
     commands = [
         "/new_record - לקיחת פריט חדש",
         "/return - החזרת פריט",

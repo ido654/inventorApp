@@ -13,7 +13,14 @@ DB_USER = os.environ.get("DB_USER")
 DB_PASSWORD = os.environ.get("DB_PASSWORD")
 DB_HOST = os.environ.get("DB_HOST")
 DB_PORT = os.environ.get("DB_PORT", 5432) # ברירת מחדל ל-5432
-CONN_STRING = "postgresql://bot_postgresql_ido_user:M9ZovEWuYki6dnJ97RNH4tAb1CxsQtPJ@dpg-d495kaqdbo4c7388sog0-a.oregon-postgres.render.com/bot_postgresql_ido"
+CONN_STRING = f"""
+            dbname={DB_NAME}
+            user={DB_USER}
+            password={DB_PASSWORD}
+            host={DB_HOST}
+            port={DB_PORT}
+            sslmode=require
+            """
                
 # ==========================
 # 🔌 ניהול חיבורי מסד נתונים

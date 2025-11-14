@@ -8,12 +8,24 @@ load_dotenv()
 
 
 # קונפיגורציה של PostgreSQL
+ON_RENDER = os.environ.get("RENDER") == "true"
 DB_NAME = os.environ.get("DB_NAME")
 DB_USER = os.environ.get("DB_USER")
 DB_PASSWORD = os.environ.get("DB_PASSWORD")
-DB_HOST = os.environ.get("DB_HOST")
+DB_HOST_LOCAL = os.environ.get("DB_HOST_LOCAL")
+DB_HOST_INTERNAL = os.environ.get("DB_HOST_INTERNAL") 
 DB_PORT = os.environ.get("DB_PORT", 5432) # ברירת מחדל ל-5432
-CONN_STRING = f"dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD} host={DB_HOST} port={DB_PORT} sslmode=require"
+DB_HOST = DB_HOST_INTERNAL if ON_RENDER else DB_HOST_LOCAL
+CONN_STRING = (
+            f"dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD} "
+            f"host={DB_HOST} port={DB_PORT} sslmode=require" 
+            )
+
+try:
+    conn = connect(CONN_STRING)
+    print("✅ Connected to DB!", flush=True)
+except Exception as e:
+    print("❌ DB connection failed:", e, flush=True)
 
 # ==========================
 # 🔌 ניהול חיבורי מסד נתונים
@@ -125,7 +137,7 @@ def init_db():
             )
         """)
 
-        print("✅ Database initialized successfully.")
+        print(f"✅ Database initialized successfully. using db string: {CONN_STRING}")
 
 # ==========================
 # 📦 CRUD: USERS

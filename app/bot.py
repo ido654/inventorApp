@@ -30,7 +30,7 @@ if __name__ == "__main__":
     print("Starting bot...")
     print("Another line!!!")
     print("DB_HOST:", os.environ.get("DB_HOST"))
-    print("Connection string:", os.environ.get(CONN_STRING) or 'nothing to share')
+    print("Connection string:", CONN_STRING or 'nothing to share')
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     init_db()

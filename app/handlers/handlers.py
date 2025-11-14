@@ -1,16 +1,13 @@
 from telegram import Update
-import logging
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from db.db import get_inventory_summary ,get_active_records , get_user_display_name
 from db.test_db import make_table
 from prettytable import PrettyTable
-from db.db import get_all_items
 
 async def start_command (update: Update , context : ContextTypes.DEFAULT_TYPE ):
     user = update.effective_user
     user_id = user.id
     user_name = get_user_display_name(user_id)
-    logging.info('start: %s', get_all_items())
     commands = [
         "/new_record - לקיחת פריט חדש",
         "/return - החזרת פריט",

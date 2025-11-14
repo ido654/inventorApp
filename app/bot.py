@@ -9,6 +9,11 @@ from dotenv import load_dotenv
 from db.db import init_db
 import os
 
+DB_NAME = os.environ.get("DB_NAME")
+DB_USER = os.environ.get("DB_USER")
+DB_PASSWORD = os.environ.get("DB_PASSWORD")
+DB_HOST = os.environ.get("DB_HOST")
+DB_PORT = os.environ.get("DB_PORT", 5432) # ברירת מחדל ל-5432
 
 load_dotenv()
 CONN_STRING = f"dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD} host={DB_HOST} port={DB_PORT} sslmode=require"

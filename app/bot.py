@@ -21,12 +21,14 @@ BOT_TOKEN= os.environ.get('TELEGRAM_BOT_TOKEN' , 'TELEGRAM_BOT_TOKEN')
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 PORT = int(os.environ.get('PORT', 8080))
 BOT_USERNAME = os.environ.get('BOT_USERNAME')
+
 if not BOT_TOKEN:
     raise ValueError("TELEGRAM_BOT_TOKEN must be set as an environment variable.")
 
 
 if __name__ == "__main__":
     print("Starting bot...")
+    print("Another line!!!")
     print("DB_HOST:", os.environ.get("DB_HOST"))
     print("Connection string:", os.environ.get(CONN_STRING) or 'nothing to share')
 

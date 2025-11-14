@@ -3,6 +3,12 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from db.db import get_inventory_summary ,get_active_records , get_user_display_name
 from db.test_db import make_table
 from prettytable import PrettyTable
+from zoneinfo import ZoneInfo
+
+def get_date(date):
+    dt_il = date.astimezone(ZoneInfo("Asia/Jerusalem"))
+    formatted = dt_il.strftime("%d-%m-%Y %H:%M")
+    return formatted
 
 async def start_command (update: Update , context : ContextTypes.DEFAULT_TYPE ):
     user = update.effective_user
@@ -43,14 +49,19 @@ async def daily_count_command (update: Update , context : ContextTypes.DEFAULT_T
         for row in data:
             category,total_count , rest_count = row
             table.add_row([category,  f"{rest_count}/{total_count}"])
-        return f"```\n{table.get_string()}\n```"
+        return f"<pre>{table.get_string()}</pre>"
 
     data = get_inventory_summary()
     if not data:
         await update.message.reply_text("אין נתונים להצגה כרגע.")
         return
     final_message = format_records_table(data)
-    await update.message.reply_text(f"* ספירה יומית*\n{final_message}" ,parse_mode="Markdown")
+    
+    await update.message.reply_text(
+    f"<b>ספירה יומית</b>\n{final_message}",
+    parse_mode="HTML"
+    )
+
 
 async def records_command(update: Update , context : ContextTypes.DEFAULT_TYPE ):
     def format_records_table(data):
@@ -58,7 +69,7 @@ async def records_command(update: Update , context : ContextTypes.DEFAULT_TYPE )
         table.field_names = ['פריט' , 'שם' , 'נלקח בתאריך']
         for row in data:
             item_id, name, date = row
-            table.add_row([item_id, name , date])
+            table.add_row([item_id, name , get_date(date)])
         return f"```\n{table.get_string()}\n```"
     items = get_active_records()
     final_message = format_records_table(items)

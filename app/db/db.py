@@ -21,11 +21,6 @@ CONN_STRING = (
             f"host={DB_HOST} port={DB_PORT} sslmode=require" 
             )
 
-try:
-    conn = connect(CONN_STRING)
-    print("✅ Connected to DB!", flush=True)
-except Exception as e:
-    print("❌ DB connection failed:", e, flush=True)
 
 # ==========================
 # 🔌 ניהול חיבורי מסד נתונים
@@ -137,7 +132,7 @@ def init_db():
             )
         """)
 
-        print(f"✅ Database initialized successfully. using db string: {CONN_STRING}")
+        print(f"✅ Database initialized successfully")
 
 # ==========================
 # 📦 CRUD: USERS

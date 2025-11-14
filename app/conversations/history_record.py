@@ -4,8 +4,13 @@ from db.db import (get_history_by_time)
 from db.test_db import create_table
 from prettytable import PrettyTable
 import re
+from zoneinfo import ZoneInfo
 
 ASK_DAYES= range(1)
+
+def get_date(date):
+    formatted = date.strftime("%d-%m-%Y")
+    return formatted
 
 def format_history_table(data):
     table = PrettyTable()
@@ -13,7 +18,7 @@ def format_history_table(data):
     for row in data:
         item_id, name, is_return_int, date = row
         is_return_text = "✅ כן" if is_return_int == 1 else "❌ לא"
-        table.add_row([item_id, name, is_return_text, date])
+        table.add_row([item_id, name, is_return_text, get_date(date)])
     return f"```\n{table.get_string()}\n```"
 
 async def get_history_command(update: Update , context : ContextTypes.DEFAULT_TYPE):

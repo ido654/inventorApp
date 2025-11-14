@@ -11,7 +11,7 @@ import os
 
 
 load_dotenv()
-
+CONN_STRING = f"dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD} host={DB_HOST} port={DB_PORT} sslmode=require"
 BOT_TOKEN= os.environ.get('TELEGRAM_BOT_TOKEN' , 'TELEGRAM_BOT_TOKEN')
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 PORT = int(os.environ.get('PORT', 8080))
@@ -23,7 +23,7 @@ if not BOT_TOKEN:
 if __name__ == "__main__":
     print("Starting bot...")
     print("DB_HOST:", os.environ.get("DB_HOST"))
-    print("Connection string:", os.environ.get("DB_HOST") or 'nothing to share')
+    print("Connection string:", os.environ.get(CONN_STRING) or 'nothing to share')
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     init_db()

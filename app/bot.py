@@ -9,14 +9,8 @@ from dotenv import load_dotenv
 from db.db import init_db
 import os
 
-DB_NAME = os.environ.get("DB_NAME")
-DB_USER = os.environ.get("DB_USER")
-DB_PASSWORD = os.environ.get("DB_PASSWORD")
-DB_HOST = os.environ.get("DB_HOST")
-DB_PORT = os.environ.get("DB_PORT", 5432) # ברירת מחדל ל-5432
-
 load_dotenv()
-CONN_STRING = f"dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD} host={DB_HOST} port={DB_PORT} sslmode=require"
+
 BOT_TOKEN= os.environ.get('TELEGRAM_BOT_TOKEN' , 'TELEGRAM_BOT_TOKEN')
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 PORT = int(os.environ.get('PORT', 8080))
@@ -28,9 +22,7 @@ if not BOT_TOKEN:
 
 if __name__ == "__main__":
     print("Starting bot...")
-    print("Another line!!!")
-    print("DB_HOST:", os.environ.get("DB_HOST"))
-    print("Connection string:", CONN_STRING or 'nothing to share')
+
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     init_db()

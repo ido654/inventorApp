@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # פקודות
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("daily_count", daily_count_command))
-    app.add_handler(CommandHandler("show", records_command))
+    app.add_handler(CommandHandler("records", records_command))
     app.add_handler(ConversationHandler(
         entry_points=[CommandHandler("register" , start_registration)],
         states={
